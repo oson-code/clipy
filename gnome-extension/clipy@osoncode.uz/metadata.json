@@ -1,0 +1,7 @@
+{
+  "uuid": "clipy@osoncode.uz",
+  "name": "Clipy",
+  "description": "Companion for the Clipy clipboard app. On Wayland it provides Clipy's global shortcuts, the history and snippet menu at the mouse pointer, and automatic paste. Requires the clipy app to be running.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "version": 1
+}

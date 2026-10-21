@@ -1,0 +1,9 @@
+# Headless GNOME Shell for testing the Clipy extension (scripts/it-gnome.sh).
+FROM clipy-dev:24.04
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gnome-shell gnome-shell-extension-prefs xwayland wl-clipboard dconf-cli \
+        gnome-settings-daemon-common gsettings-desktop-schemas \
+    && rm -rf /var/lib/apt/lists/*
+# GNOME Shell needs logind; GNOME's own CI mocks it with python-dbusmock.
+RUN apt-get update && apt-get install -y --no-install-recommends python3-dbusmock \
+    && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,5 @@
+/target
+/dist
+*.deb
+.idea/workspace.xml
+.idea/shelf/

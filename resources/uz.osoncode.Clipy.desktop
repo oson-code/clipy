@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Clipy
+Comment=Clipboard extension app for Linux
+Exec=clipy
+Icon=clipy
+Terminal=false
+Categories=Utility;
+StartupNotify=false
+StartupWMClass=uz.osoncode.Clipy
+X-GNOME-Autostart-enabled=true

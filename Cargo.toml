@@ -1,0 +1,62 @@
+[package]
+name = "clipy"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.90"
+description = "Clipboard extension app for Linux, a port of Clipy for macOS"
+authors = ["imirsaburov <imirsaburov@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+anyhow = "1"
+arboard = { version = "3.7", features = ["wayland-data-control"] }
+base64 = "0.22"
+blake3 = "1"
+directories = "6"
+env_logger = "0.11"
+futures-channel = "0.3"
+gtk = "0.18"
+image = { version = "0.25", default-features = false, features = ["png"] }
+lexopt = "0.3"
+log = "0.4"
+roxmltree = "0.21"
+rusqlite = { version = "0.40", features = ["bundled", "blob"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tao = "0.37"
+thiserror = "2"
+toml = "1"
+tray-icon = "0.26"
+x11rb = { version = "0.13", features = ["xfixes", "xkb", "xtest"] }
+zbus = "6"
+
+[dev-dependencies]
+tempfile = "3"
+
+[package.metadata.deb]
+section = "utils"
+priority = "optional"
+# The AppIndicator library is loaded at run time, so $auto cannot see it.
+depends = "$auto, libayatana-appindicator3-1"
+recommends = "xdotool"
+extended-description = """\
+Clipboard history and snippets in a panel menu and a menu at the mouse pointer, a port of \
+Clipy for macOS. On GNOME Wayland, enable the bundled \"Clipy\" GNOME Shell extension."""
+assets = [
+    ["target/release/clipy", "usr/bin/", "755"],
+    ["resources/uz.osoncode.Clipy.desktop", "usr/share/applications/", "644"],
+    ["resources/icons/app_16.png", "usr/share/icons/hicolor/16x16/apps/clipy.png", "644"],
+    ["resources/icons/app_32.png", "usr/share/icons/hicolor/32x32/apps/clipy.png", "644"],
+    ["resources/icons/app_128.png", "usr/share/icons/hicolor/128x128/apps/clipy.png", "644"],
+    ["resources/icons/app_256.png", "usr/share/icons/hicolor/256x256/apps/clipy.png", "644"],
+    ["resources/icons/app_512.png", "usr/share/icons/hicolor/512x512/apps/clipy.png", "644"],
+    ["LICENSE", "usr/share/doc/clipy/LICENSE", "644"],
+    ["resources/icons/LICENSE-Clipy", "usr/share/doc/clipy/LICENSE-Clipy", "644"],
+    ["gnome-extension/clipy@osoncode.uz/*", "usr/share/gnome-shell/extensions/clipy@osoncode.uz/", "644"],
+]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

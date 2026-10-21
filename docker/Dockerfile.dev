@@ -1,0 +1,20 @@
+# Development image: everything needed to build, lint and test clipy headlessly.
+ARG UBUNTU=24.04
+FROM ubuntu:${UBUNTU}
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates curl git build-essential pkg-config \
+        libgtk-3-dev libayatana-appindicator3-dev libxdo-dev libx11-dev \
+        xvfb xauth xclip xdotool x11-utils dbus dbus-x11 sqlite3 sysstat procps \
+        adwaita-icon-theme librsvg2-common fonts-dejavu-core imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
+        --default-toolchain stable -c clippy -c rustfmt \
+    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME
+
+WORKDIR /src
