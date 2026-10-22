@@ -1,7 +1,7 @@
 # Build, install and package Clipy for Linux.
 #   make install            build and install to $(PREFIX) (use sudo for /usr/local)
 #   make install-extension  install the GNOME Shell extension for the current user
-#   make deb                build a .deb with cargo-deb (cargo install cargo-deb)
+#   make dist               build the .deb and .tar.gz to share, into dist/ (see INSTALL.md)
 
 PREFIX ?= /usr/local
 DESTDIR ?=
@@ -12,7 +12,7 @@ EXT_SRC := gnome-extension/$(UUID)
 EXT_USER_DIR := $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 ICON_SIZES := 16 32 128 256 512
 
-.PHONY: build install uninstall install-extension uninstall-extension deb
+.PHONY: build install uninstall install-extension uninstall-extension dist
 
 build:
 	cargo build --release
@@ -43,5 +43,5 @@ uninstall-extension:
 	-gnome-extensions disable $(UUID)
 	rm -rf $(EXT_USER_DIR)
 
-deb: build
-	cargo deb --no-build
+dist: build
+	scripts/package.sh

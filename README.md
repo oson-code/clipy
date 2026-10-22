@@ -25,7 +25,9 @@ login screen there.
 
 ## Install
 
-Build dependencies (Ubuntu 22.04+, Mint 21+):
+Ready-made `.deb` and `.tar.gz` packages: see [INSTALL.md](INSTALL.md).
+
+To build from source, install the build dependencies (Ubuntu 22.04+, Mint 21+):
 
 ```bash
 sudo apt install build-essential pkg-config libgtk-3-dev libayatana-appindicator3-dev libxdo-dev
@@ -50,9 +52,11 @@ gnome-extensions enable clipy@osoncode.uz
 Ubuntu and Mint ship the AppIndicator support that the panel icon needs. Vanilla GNOME needs the
 "AppIndicator and KStatusNotifierItem Support" extension.
 
-A `.deb` package can be built with `cargo install cargo-deb && make deb`. It installs the
-extension system-wide. Build it on the oldest release you target: a package built on 24.04 needs
-glibc 2.39, so it will not install on 22.04.
+`make dist` builds the packages to share into `dist/`: a `.deb` that installs the extension
+system-wide, a `.tar.gz` with an `install.sh`, `SHA256SUMS` and INSTALL.md. Its `libc6`
+dependency comes from the binary's newest non-weak glibc symbol, 2.34 on current toolchains, so
+a build on Ubuntu 26.04 still installs on 22.04. Build on the oldest release you target if that
+changes.
 
 ## Use
 

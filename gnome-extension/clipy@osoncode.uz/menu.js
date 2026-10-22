@@ -101,7 +101,9 @@ export class ClipyMenu {
         for (const node of nodes) {
             switch (node.type) {
             case 'header': {
-                const item = new PopupMenu.PopupMenuItem(node.label, {reactive: false});
+                // Not focusable either: a non-reactive item that takes the key focus gets no key
+                // events, so arrow navigation would stop there.
+                const item = new PopupMenu.PopupMenuItem(node.label, {reactive: false, can_focus: false});
                 item.add_style_class_name('clipy-header');
                 menu.addMenuItem(item);
                 break;
@@ -137,6 +139,12 @@ export class ClipyMenu {
     }
 
     _onKey(event) {
+        // Before an item has the focus, PopupMenuManager handles Down; Up starts from the bottom.
+        if (event.get_key_symbol() === Clutter.KEY_Up &&
+            global.stage.get_key_focus() === this._menu.actor) {
+            this._menu.actor.navigate_focus(null, St.DirectionType.TAB_BACKWARD, false);
+            return Clutter.EVENT_STOP;
+        }
         const item = this._accels?.get(String.fromCodePoint(event.get_key_unicode() || 0));
         if (!item)
             return Clutter.EVENT_PROPAGATE;

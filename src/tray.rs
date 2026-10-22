@@ -80,12 +80,24 @@ fn glyph_for(mode: PanelIcon, auto: Glyph) -> Option<Glyph> {
 }
 
 fn panel_icon(glyph: Glyph) -> Result<Icon> {
+    let (rgba, w, h) = glyph_rgba(glyph)?;
+    Icon::from_rgba(rgba, w, h).map_err(|e| anyhow!("{e}"))
+}
+
+/// Clipy's two glyphs are black template images that macOS tints to suit the menu bar. Panels
+/// here draw them as they are, so the white one is painted white, keeping its alpha.
+fn glyph_rgba(glyph: Glyph) -> Result<(Vec<u8>, u32, u32)> {
     let png = match glyph {
         Glyph::White => STATUS_WHITE,
         Glyph::Black => STATUS_BLACK,
     };
-    let (rgba, w, h) = images::decode_png(png)?;
-    Icon::from_rgba(rgba, w, h).map_err(|e| anyhow!("{e}"))
+    let (mut rgba, w, h) = images::decode_png(png)?;
+    if glyph == Glyph::White {
+        for [r, g, b, _] in rgba.as_chunks_mut::<4>().0 {
+            (*r, *g, *b) = (0xff, 0xff, 0xff);
+        }
+    }
+    Ok((rgba, w, h))
 }
 
 fn build_menu(nodes: &[MenuNode], prefs: &MenuPrefs) -> Menu {
@@ -178,4 +190,27 @@ fn pixbuf_rgba(pixbuf: &gtk::gdk_pixbuf::Pixbuf) -> Option<(Vec<u8>, u32, u32)> 
         rgba.extend_from_slice(bytes.get(row * stride..row * stride + w * 4)?);
     }
     Some((rgba, w as u32, h as u32))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn glyphs_are_drawn_in_their_colour() {
+        let opaque = |glyph| {
+            let (rgba, _, _) = glyph_rgba(glyph).unwrap();
+            rgba.as_chunks::<4>()
+                .0
+                .iter()
+                .filter(|p| p[3] > 0)
+                .map(|&[r, g, b, _]| [r, g, b])
+                .collect::<Vec<_>>()
+        };
+        let white = opaque(Glyph::White);
+        let black = opaque(Glyph::Black);
+        assert!(!white.is_empty() && !black.is_empty());
+        assert!(white.iter().all(|p| *p == [0xff; 3]));
+        assert!(black.iter().all(|p| *p == [0; 3]));
+    }
 }

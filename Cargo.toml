@@ -34,28 +34,6 @@ zbus = "6"
 [dev-dependencies]
 tempfile = "3"
 
-[package.metadata.deb]
-section = "utils"
-priority = "optional"
-# The AppIndicator library is loaded at run time, so $auto cannot see it.
-depends = "$auto, libayatana-appindicator3-1"
-recommends = "xdotool"
-extended-description = """\
-Clipboard history and snippets in a panel menu and a menu at the mouse pointer, a port of \
-Clipy for macOS. On GNOME Wayland, enable the bundled \"Clipy\" GNOME Shell extension."""
-assets = [
-    ["target/release/clipy", "usr/bin/", "755"],
-    ["resources/uz.osoncode.Clipy.desktop", "usr/share/applications/", "644"],
-    ["resources/icons/app_16.png", "usr/share/icons/hicolor/16x16/apps/clipy.png", "644"],
-    ["resources/icons/app_32.png", "usr/share/icons/hicolor/32x32/apps/clipy.png", "644"],
-    ["resources/icons/app_128.png", "usr/share/icons/hicolor/128x128/apps/clipy.png", "644"],
-    ["resources/icons/app_256.png", "usr/share/icons/hicolor/256x256/apps/clipy.png", "644"],
-    ["resources/icons/app_512.png", "usr/share/icons/hicolor/512x512/apps/clipy.png", "644"],
-    ["LICENSE", "usr/share/doc/clipy/LICENSE", "644"],
-    ["resources/icons/LICENSE-Clipy", "usr/share/doc/clipy/LICENSE-Clipy", "644"],
-    ["gnome-extension/clipy@osoncode.uz/*", "usr/share/gnome-shell/extensions/clipy@osoncode.uz/", "644"],
-]
-
 [profile.release]
 lto = true
 codegen-units = 1
