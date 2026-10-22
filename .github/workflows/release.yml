@@ -1,0 +1,77 @@
+# Pushing a version tag builds the packages, publishes the APT repository on GitHub Pages
+# (https://oson-code.github.io/clipy, see INSTALL.md) and makes a GitHub release with the files:
+#   git tag v0.1.0 && git push origin v0.1.0
+# The tag must match the version in Cargo.toml. Set up once, in the repository settings:
+#   Secrets and variables → Actions: APT_SIGNING_KEY, the armored private key that signs the
+#     repository, without a passphrase (gpg --armor --export-secret-keys FINGERPRINT)
+#   Pages → Source: GitHub Actions
+#   Environments → github-pages → Deployment branches and tags: add the tag pattern v*
+# Each release replaces the repository, so it holds only the latest version.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # The oldest Ubuntu the package supports, so the binary needs no newer glibc than it has.
+    container: ubuntu:22.04
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates curl git build-essential pkg-config \
+            libgtk-3-dev libayatana-appindicator3-dev libxdo-dev
+      - uses: actions/checkout@v5
+      - name: Check the tag matches Cargo.toml
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          [ "${GITHUB_REF_NAME#v}" = "$version" ] ||
+            { echo "Tag $GITHUB_REF_NAME does not match version $version in Cargo.toml."; exit 1; }
+      - name: Install Rust
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >>"$GITHUB_PATH"
+      - run: make dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Build the APT repository
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+        run: |
+          sudo apt-get install -y --no-install-recommends dpkg-dev
+          printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
+          scripts/apt-repo.sh site "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}" dist/*.deb
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
+      - name: Make the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "Clipy ${GITHUB_REF_NAME#v}" --generate-notes \
+            dist/*.deb dist/*.tar.gz dist/SHA256SUMS
