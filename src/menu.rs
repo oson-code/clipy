@@ -150,7 +150,11 @@ pub fn build(kind: MenuKind, src: &MenuSource) -> Vec<MenuNode> {
 
 fn main_menu(src: &MenuSource) -> Vec<MenuNode> {
     let history = history_section(src);
-    let snippets = snippet_section(src);
+    let snippets = if src.prefs.show_snippets {
+        snippet_section(src)
+    } else {
+        Vec::new()
+    };
     let (first, second) = if src.prefs.snippets_above_history {
         (snippets, history)
     } else {
@@ -721,6 +725,27 @@ mod tests {
             ["[Snippet]", "On (2)", "---", "[History]", "1. clip 1"]
         );
         assert_eq!(labels(children(&nodes[1])), ["1. a", "2. c"]);
+    }
+
+    #[test]
+    fn snippets_can_be_left_out_of_the_main_menu() {
+        let h = history(1);
+        let f = vec![folder(1, "Common", true, &[("Hello", true)])];
+        let p = MenuPrefs {
+            show_snippets: false,
+            snippets_above_history: true,
+            inline_items: 5,
+            ..Default::default()
+        };
+        let nodes = build(MenuKind::Main, &src(&h, &f, &p));
+        assert_eq!(
+            labels(&nodes)[..4],
+            ["[History]", "1. clip 1", "---", "Clear History"]
+        );
+        assert_eq!(
+            labels(&build(MenuKind::Snippets, &src(&h, &f, &p))),
+            ["[Snippet]", "Common (1)"]
+        );
     }
 
     #[test]

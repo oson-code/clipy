@@ -245,6 +245,8 @@ pub struct MenuPrefs {
     pub mark_numbers: bool,
     pub start_at_zero: bool,
     pub numeric_keys: bool,
+    /// Show the snippet folders in the main menu; the snippets hotkey menu works either way.
+    pub show_snippets: bool,
     pub snippets_above_history: bool,
     pub show_clear_item: bool,
     pub confirm_clear: bool,
@@ -268,6 +270,7 @@ impl Default for MenuPrefs {
             mark_numbers: true,
             start_at_zero: false,
             numeric_keys: false,
+            show_snippets: true,
             snippets_above_history: false,
             show_clear_item: true,
             confirm_clear: true,

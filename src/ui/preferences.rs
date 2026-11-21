@@ -329,12 +329,21 @@ fn menu_pane(ctx: &Ctx) -> gtk::Widget {
         |s| s.menu.numeric_keys,
         |s, v| s.menu.numeric_keys = v,
     ));
-    p.row(&check(
+    let snippets = check(
+        ctx,
+        tr("Show snippets in menu"),
+        |s| s.menu.show_snippets,
+        |s, v| s.menu.show_snippets = v,
+    );
+    p.row(&snippets);
+    let above = check(
         ctx,
         tr("Show snippets above history"),
         |s| s.menu.snippets_above_history,
         |s, v| s.menu.snippets_above_history = v,
-    ));
+    );
+    depends_on(&above, &snippets);
+    p.indented(&above);
     p.separator();
 
     let clear_item = check(
