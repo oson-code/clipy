@@ -75,6 +75,7 @@ export class ClipyMenu {
             return;
         }
         const [x, y] = global.get_pointer();
+        const workArea = Main.layoutManager.getWorkAreaForMonitor(global.display.get_current_monitor());
         this._anchor = new St.Widget({x, y, width: 1, height: 1, opacity: 0, reactive: false});
         Main.uiGroup.add_child(this._anchor);
         this._menu = new PopupMenu.PopupMenu(this._anchor, 0.0, St.Side.TOP);
@@ -94,7 +95,35 @@ export class ClipyMenu {
                     return GLib.SOURCE_REMOVE;
                 });
         });
+        this._place(y, workArea);
         this._menu.open(false);
+    }
+
+    // BoxPointer opens the menu below the pointer and moves it above only when it fits there
+    // whole; it never pushes the menu back onto the screen. Pick the side here, slide the menu
+    // up when it fits on neither side, and cap its height so an open submenu scrolls.
+    _place(y, workArea) {
+        const actor = this._menu.actor;
+        const gap = actor.get_theme_node().get_length('-boxpointer-gap');
+        const [, natHeight] = actor.get_preferred_height(-1);
+        const height = natHeight + gap;
+        const top = workArea.y;
+        const bottom = workArea.y + workArea.height;
+        // The anchor is 1px tall, and BoxPointer flips only when the menu is strictly smaller
+        // than the space above, so the limits below keep a pixel to spare.
+        const below = bottom - (y + 1);
+        const above = y - top;
+        let limit;
+        if (height < below) {
+            limit = below;
+        } else if (height < above) {
+            limit = above;
+        } else {
+            this._anchor.y = Math.max(top, bottom - 1 - height);
+            limit = bottom - 1 - this._anchor.y;
+        }
+        const scaleFactor = St.ThemeContext.get_for_stage(global.stage).scale_factor;
+        actor.style = `max-height: ${Math.floor((limit - gap - 1) / scaleFactor)}px;`;
     }
 
     _fill(menu, nodes) {

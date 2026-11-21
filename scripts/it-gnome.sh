@@ -74,12 +74,30 @@ done
 check "copies captured through the extension" "3" "$(sqlite3 "$DB" 'SELECT COUNT(*) FROM history')"
 
 # Super+Shift+V on a virtual keyboard, as if typed: goes through the extension's grab.
-shell_eval "const C = imports.gi.Clutter, G = imports.gi.GLib;
-    global._clipyKb ??= C.get_default_backend().get_default_seat().create_virtual_device(C.InputDeviceType.KEYBOARD_DEVICE);
-    for (const k of [125, 42, 47]) global._clipyKb.notify_key(G.get_monotonic_time(), k, C.KeyState.PRESSED);
-    for (const k of [47, 42, 125]) global._clipyKb.notify_key(G.get_monotonic_time(), k, C.KeyState.RELEASED);
-    'sent'" >/dev/null
-sleep 1
+press_shortcut() {
+    shell_eval "const C = imports.gi.Clutter, G = imports.gi.GLib;
+        global._clipyKb ??= C.get_default_backend().get_default_seat().create_virtual_device(C.InputDeviceType.KEYBOARD_DEVICE);
+        for (const k of [125, 42, 47]) global._clipyKb.notify_key(G.get_monotonic_time(), k, C.KeyState.PRESSED);
+        for (const k of [47, 42, 125]) global._clipyKb.notify_key(G.get_monotonic_time(), k, C.KeyState.RELEASED);
+        'sent'" >/dev/null
+    sleep 1
+}
+move_pointer() {
+    shell_eval "const C = imports.gi.Clutter, G = imports.gi.GLib;
+        global._clipyPtr ??= C.get_default_backend().get_default_seat().create_virtual_device(C.InputDeviceType.POINTER_DEVICE);
+        global._clipyPtr.notify_absolute_motion(G.get_monotonic_time(), $1, $2);
+        'moved'" >/dev/null
+    sleep 0.3
+}
+MENU_JS="Main.uiGroup.get_children().find(a => a.has_style_class_name?.('clipy-menu'))"
+menu_extents() { # top and bottom edge of the open menu, or 'none'
+    shell_eval "const r = $MENU_JS?.get_transformed_extents();
+        r ? Math.round(r.get_y()) + ' ' + Math.round(r.get_y() + r.get_height()) : 'none'"
+}
+on_screen() { # "top bottom" inside the 800px virtual monitor
+    [ "$1" != none ] && read -r t b <<<"$1" && [ "$t" -ge 0 ] && [ "$b" -le 800 ]
+}
+press_shortcut
 check "Super+Shift+V opens the menu" "1" "$(grep -c 'showing the main menu' "$HOME/clipy.log")"
 shot gnome-menu
 
@@ -90,6 +108,29 @@ sleep 1
 check "menu item activated" "2. second copy" "$PICKED"
 check "activation puts the item on the clipboard" "second copy" "$(xclip -selection clipboard -o 2>/dev/null)"
 check "self-echo is not recorded" "3" "$(sqlite3 "$DB" 'SELECT COUNT(*) FROM history')"
+
+# Near the bottom of the screen the menu must open above the pointer or slide up, never off screen.
+for i in $(seq 25); do printf 'more copy %s' "$i" | xclip -selection clipboard >/dev/null 2>&1; sleep 0.3; done
+move_pointer 640 790
+press_shortcut
+EXT=$(menu_extents)
+on_screen "$EXT" && pass "menu at the bottom stays on screen ($EXT)" || fail "menu at the bottom: [$EXT]"
+shot gnome-menu-bottom
+OPENED=$(shell_eval "const sub = $MENU_JS?._delegate._getMenuItems().find(i => i.menu?._needsScrollbar);
+    sub ? (sub.menu.open(false), 'opened') : 'none'")
+sleep 0.5
+EXT=$(menu_extents)
+[ "$OPENED" = opened ] && on_screen "$EXT" && pass "menu with an open folder stays on screen ($EXT)" \
+    || fail "menu with an open folder: [$OPENED] [$EXT]"
+shot gnome-menu-bottom-folder
+shell_eval "$MENU_JS?._delegate.close(false); 'closed'" >/dev/null; sleep 0.5
+
+move_pointer 640 100
+press_shortcut
+EXT=$(menu_extents)
+on_screen "$EXT" && read -r T _ <<<"$EXT" && [ "$T" -ge 100 ] \
+    && pass "menu with room below opens below the pointer ($EXT)" || fail "menu at y=100: [$EXT]"
+shell_eval "$MENU_JS?._delegate.close(false); 'closed'" >/dev/null; sleep 0.5
 
 target/debug/clipy --quit; sleep 0.5
 
