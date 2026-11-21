@@ -16,3 +16,8 @@
 .clipy-menu .clipy-preview {
     margin-right: 6px;
 }
+
+/* A folder row while its popup is open beside it. */
+.clipy-menu .clipy-folder.clipy-open {
+    background-color: rgba(127, 127, 127, 0.25);
+}

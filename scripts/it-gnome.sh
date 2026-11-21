@@ -89,10 +89,27 @@ move_pointer() {
         'moved'" >/dev/null
     sleep 0.3
 }
-MENU_JS="Main.uiGroup.get_children().find(a => a.has_style_class_name?.('clipy-menu'))"
-menu_extents() { # top and bottom edge of the open menu, or 'none'
-    shell_eval "const r = $MENU_JS?.get_transformed_extents();
+LAYER_JS="Main.uiGroup.get_children().find(a => a.has_style_class_name?.('clipy-menu-layer'))"
+MENU_JS="$LAYER_JS?.get_children().find(a => a.has_style_class_name?.('clipy-menu') && !a._delegate.folderItem)"
+FOLDER_JS="$LAYER_JS?.get_children().find(a => a._delegate?.folderItem && a.visible)"
+extents() { # top and bottom edge of the actor, or 'none'
+    shell_eval "const r = $1?.get_transformed_extents();
         r ? Math.round(r.get_y()) + ' ' + Math.round(r.get_y() + r.get_height()) : 'none'"
+}
+x_range() { # left and right edge of the actor, or 'none'
+    shell_eval "const r = $1?.get_transformed_extents();
+        r ? Math.round(r.get_x()) + ' ' + Math.round(r.get_x() + r.get_width()) : 'none'"
+}
+menu_extents() { extents "$MENU_JS"; }
+press_key() { # evdev key codes, pressed and released one after another
+    shell_eval "const C = imports.gi.Clutter, G = imports.gi.GLib;
+        global._clipyKb ??= C.get_default_backend().get_default_seat().create_virtual_device(C.InputDeviceType.KEYBOARD_DEVICE);
+        for (const k of [$*]) {
+            global._clipyKb.notify_key(G.get_monotonic_time(), k, C.KeyState.PRESSED);
+            global._clipyKb.notify_key(G.get_monotonic_time(), k, C.KeyState.RELEASED);
+        }
+        'sent'" >/dev/null
+    sleep 0.5
 }
 on_screen() { # "top bottom" inside the 800px virtual monitor
     [ "$1" != none ] && read -r t b <<<"$1" && [ "$t" -ge 0 ] && [ "$b" -le 800 ]
@@ -101,7 +118,7 @@ press_shortcut
 check "Super+Shift+V opens the menu" "1" "$(grep -c 'showing the main menu' "$HOME/clipy.log")"
 shot gnome-menu
 
-PICKED=$(shell_eval "const menu = Main.uiGroup.get_children().find(a => a.has_style_class_name?.('clipy-menu'))?._delegate;
+PICKED=$(shell_eval "const menu = $MENU_JS?._delegate;
     const item = menu?._getMenuItems().find(i => i.label?.text?.startsWith('2. '));
     item ? (item.activate(null), item.label.text) : 'none'")
 sleep 1
@@ -116,20 +133,42 @@ press_shortcut
 EXT=$(menu_extents)
 on_screen "$EXT" && pass "menu at the bottom stays on screen ($EXT)" || fail "menu at the bottom: [$EXT]"
 shot gnome-menu-bottom
-OPENED=$(shell_eval "const sub = $MENU_JS?._delegate._getMenuItems().find(i => i.menu?._needsScrollbar);
-    sub ? (sub.menu.open(false), 'opened') : 'none'")
+# A folder opens in its own popup beside the row, as in Clipy on macOS; the main menu stays put.
+BEFORE=$(menu_extents)
+OPENED=$(shell_eval "const item = $MENU_JS?._delegate._getMenuItems().find(i => i.submenu);
+    item ? (item.activate(null), item.label.text) : 'none'")
 sleep 0.5
-EXT=$(menu_extents)
-[ "$OPENED" = opened ] && on_screen "$EXT" && pass "menu with an open folder stays on screen ($EXT)" \
-    || fail "menu with an open folder: [$OPENED] [$EXT]"
+FOLDER=$(extents "$FOLDER_JS")
+[ "$OPENED" != none ] && on_screen "$FOLDER" && pass "folder [$OPENED] opens on screen ($FOLDER)" \
+    || fail "folder popup: [$OPENED] [$FOLDER]"
+check "opening a folder leaves the main menu as it was" "$BEFORE" "$(menu_extents)"
+read -r ML MR <<<"$(x_range "$MENU_JS")"; read -r FL FR <<<"$(x_range "$FOLDER_JS")"
+# Beside: at most the menu's rounded edge overlaps.
+{ [ "${FL:-0}" -ge $(( ${MR:-0} - 16 )) ] || [ "${FR:-0}" -le $(( ${ML:-0} + 16 )) ]; } \
+    && pass "folder popup sits beside the menu" || fail "folder popup overlaps the menu: [$ML $MR] [$FL $FR]"
 shot gnome-menu-bottom-folder
-shell_eval "$MENU_JS?._delegate.close(false); 'closed'" >/dev/null; sleep 0.5
+PICKED=$(shell_eval "const item = $FOLDER_JS?._delegate._getMenuItems().find(i => i.label?.text?.startsWith('1. '));
+    item ? (item.activate(null), item.label.text) : 'none'")
+sleep 1
+check "item in a folder activated" "1. more copy 22" "$PICKED"
+check "folder item goes to the clipboard" "more copy 22" "$(xclip -selection clipboard -o 2>/dev/null)"
+check "picking from a folder closes the menu" "none" "$(menu_extents)"
 
 move_pointer 640 100
 press_shortcut
 EXT=$(menu_extents)
 on_screen "$EXT" && read -r T _ <<<"$EXT" && [ "$T" -ge 100 ] \
     && pass "menu with room below opens below the pointer ($EXT)" || fail "menu at y=100: [$EXT]"
+# Keyboard: Right opens the focused folder and moves into it, Left goes back, Escape closes.
+shell_eval "$MENU_JS?._delegate._getMenuItems().find(i => i.submenu)?.grab_key_focus(); 'focused'" >/dev/null
+press_key 106
+check "Right opens the folder and focuses its first row" "true" \
+    "$(shell_eval "String($FOLDER_JS?.contains(global.stage.get_key_focus()) ?? false)")"
+press_key 105
+check "Left closes the folder" "none" "$(extents "$FOLDER_JS")"
+check "Left leaves the main menu open" "true" "$([ "$(menu_extents)" != none ] && echo true)"
+press_key 1
+check "Escape closes the menu" "none" "$(menu_extents)"
 shell_eval "$MENU_JS?._delegate.close(false); 'closed'" >/dev/null; sleep 0.5
 
 target/debug/clipy --quit; sleep 0.5
