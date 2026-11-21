@@ -7,8 +7,8 @@ to open the menu at the mouse pointer, or click the clipboard icon in the top pa
 
 | File | Use it when |
 |---|---|
-| `clipy_0.1.1_amd64.deb` | Ubuntu, Linux Mint, Pop!_OS, Debian. Easiest: apt installs everything it needs. |
-| `clipy-0.1.1-linux-x86_64.tar.gz` | You want to install for your user only, without sudo. |
+| `clipy_0.1.2_amd64.deb` | Ubuntu, Linux Mint, Pop!_OS, Debian. Easiest: apt installs everything it needs. |
+| `clipy-0.1.2-linux-x86_64.tar.gz` | You want to install for your user only, without sudo. |
 
 Both are for 64-bit Intel/AMD PCs (x86_64).
 
@@ -30,7 +30,7 @@ gear button on the login screen there.
 1. Open a terminal in the folder with the download and run:
 
    ```bash
-   sudo apt install ./clipy_0.1.1_amd64.deb
+   sudo apt install ./clipy_0.1.2_amd64.deb
    ```
 
    Keep the `./`: it tells apt to use the file instead of searching online for it.
@@ -51,8 +51,8 @@ gear button on the login screen there.
 1. Unpack it and run the installer:
 
    ```bash
-   tar xzf clipy-0.1.1-linux-x86_64.tar.gz
-   cd clipy-0.1.1-linux-x86_64
+   tar xzf clipy-0.1.2-linux-x86_64.tar.gz
+   cd clipy-0.1.2-linux-x86_64
    ./install.sh
    ```
 
