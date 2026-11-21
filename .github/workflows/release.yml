@@ -64,6 +64,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends dpkg-dev
           printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
           scripts/apt-repo.sh site "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}" dist/*.deb
+      - name: Add the landing page
+        run: |
+          cp -r web/. site/
+          cp resources/icons/app_256.png site/icon.png
+          cp resources/icons/app_32.png site/favicon.png
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

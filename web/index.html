@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clipy for Linux</title>
+<meta name="description" content="Clipboard history and snippet manager for Ubuntu and Linux Mint. Your copy history in a menu at the mouse pointer, a port of Clipy for macOS.">
+<meta property="og:title" content="Clipy for Linux">
+<meta property="og:description" content="Clipboard history and snippets in a menu at your mouse pointer. For Ubuntu, Linux Mint and GNOME on Wayland.">
+<meta property="og:image" content="icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+:root {
+  --bg: #f7f5f2;
+  --bg-alt: #efebe5;
+  --surface: #ffffff;
+  --text: #1f1d1a;
+  --muted: #5f5a53;
+  --line: #e2ddd5;
+  --accent: #2f7fcc;
+  --accent-strong: #1f66ad;
+  --accent-soft: #e3effa;
+  --on-accent: #ffffff;
+  --wood: #b9774a;
+  --code-bg: #1f2227;
+  --code-text: #e8e6e3;
+  --menu-bg: #2e2e32;
+  --menu-text: #f2f2f2;
+  --menu-muted: rgba(255, 255, 255, 0.55);
+  --menu-hover: rgba(255, 255, 255, 0.12);
+  --shadow: 0 1px 2px rgba(31, 29, 26, 0.06), 0 8px 24px rgba(31, 29, 26, 0.08);
+  --radius: 14px;
+  --font: ui-sans-serif, system-ui, "Ubuntu", "Cantarell", "Segoe UI", "Noto Sans", sans-serif;
+  --mono: ui-monospace, "Ubuntu Mono", "DejaVu Sans Mono", "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181b;
+    --bg-alt: #1d1f23;
+    --surface: #23252a;
+    --text: #ecebe8;
+    --muted: #a7a39c;
+    --line: #34363c;
+    --accent: #5aa3e6;
+    --accent-strong: #7cb7ee;
+    --accent-soft: #1f3247;
+    --on-accent: #0d1824;
+    --wood: #d39466;
+    --code-bg: #101114;
+    --menu-bg: #36373c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181b;
+  --bg-alt: #1d1f23;
+  --surface: #23252a;
+  --text: #ecebe8;
+  --muted: #a7a39c;
+  --line: #34363c;
+  --accent: #5aa3e6;
+  --accent-strong: #7cb7ee;
+  --accent-soft: #1f3247;
+  --on-accent: #0d1824;
+  --wood: #d39466;
+  --code-bg: #101114;
+  --menu-bg: #36373c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-strong); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--accent); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+@media (min-width: 720px) { .wrap { padding: 0 32px; } }
+
+/* Navigation */
+.nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 650; color: var(--text); text-decoration: none; }
+.brand img { width: 30px; height: 30px; }
+.nav-links { display: flex; gap: 20px; align-items: center; font-size: 15px; }
+.nav-links a { color: var(--muted); text-decoration: none; }
+.nav-links a:hover { color: var(--text); }
+@media (max-width: 560px) { .nav-links .hide-sm { display: none; } }
+
+/* Hero */
+.hero { padding: 64px 0 72px; }
+.hero .wrap { display: grid; gap: 48px; align-items: center; }
+@media (min-width: 900px) { .hero .wrap { grid-template-columns: 1.05fr 1fr; } }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600;
+  color: var(--accent-strong); background: var(--accent-soft); padding: 4px 12px; border-radius: 999px; }
+h1 { font-size: clamp(34px, 5.2vw, 54px); line-height: 1.08; letter-spacing: -0.02em; margin: 18px 0 18px; font-weight: 720; }
+.lede { font-size: 19px; color: var(--muted); max-width: 34em; margin: 0 0 28px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 10px;
+  font-weight: 600; font-size: 15px; text-decoration: none; border: 1px solid transparent; transition: background .15s, border-color .15s; }
+.btn-primary { background: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-strong); color: var(--on-accent); }
+.btn-ghost { border-color: var(--line); color: var(--text); background: var(--surface); }
+.btn-ghost:hover { border-color: var(--muted); color: var(--text); }
+.fine { margin-top: 18px; font-size: 14px; color: var(--muted); }
+
+/* Hero illustration: an editor with the Clipy menu at the pointer */
+.stage { position: relative; min-height: 420px; }
+.window { position: absolute; inset: 0 40px 50px 0; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.titlebar { height: 38px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--line);
+  font-size: 13px; color: var(--muted); background: var(--bg-alt); position: relative; }
+.titlebar::after { content: ""; position: absolute; right: 14px; top: 13px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--line); box-shadow: -20px 0 0 var(--line), -40px 0 0 var(--line); }
+.doc { padding: 22px 24px; font-family: var(--mono); font-size: 13.5px; color: var(--muted); line-height: 1.9; }
+.doc .caret { display: inline-block; width: 2px; height: 1.1em; vertical-align: -2px; background: var(--accent); animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.menu { position: absolute; left: 34%; top: 118px; width: 248px; background: var(--menu-bg); color: var(--menu-text);
+  border-radius: 12px; padding: 6px; font-size: 13.5px; box-shadow: 0 2px 6px rgba(0,0,0,.25), 0 18px 40px rgba(0,0,0,.3);
+  font-feature-settings: "tnum"; }
+.menu .row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 7px; white-space: nowrap; }
+.menu .row.on { background: var(--menu-hover); }
+.menu .head { font-weight: 700; color: var(--menu-muted); padding: 6px 10px 4px; }
+.menu .key { margin-left: auto; color: var(--menu-muted); }
+.menu .sep { height: 1px; background: rgba(255,255,255,.12); margin: 5px 10px; }
+.menu .swatch { width: 14px; height: 14px; border-radius: 3px; background: #ff8800; flex: none; }
+.menu .folder { width: 14px; height: 11px; border: 1.5px solid currentColor; border-radius: 2px; flex: none; opacity: .85; }
+.menu .arrow { margin-left: auto; width: 0; height: 0; border-left: 5px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+.pointer { position: absolute; left: calc(34% - 10px); top: 104px; width: 20px; height: 26px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+@media (max-width: 480px) {
+  .stage { min-height: 470px; }
+  .window { right: 0; }
+  .menu { left: 18%; width: 230px; }
+  .pointer { left: calc(18% - 10px); }
+}
+
+/* Sections */
+section { padding: 72px 0; }
+.alt { background: var(--bg-alt); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+h2 { font-size: clamp(26px, 3.4vw, 34px); letter-spacing: -0.015em; line-height: 1.2; margin: 0 0 12px; }
+.section-lede { color: var(--muted); font-size: 17px; max-width: 40em; margin: 0 0 36px; }
+
+.grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+.card h3 { font-size: 17px; margin: 12px 0 6px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.icon { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-strong); }
+.icon svg { width: 20px; height: 20px; }
+
+/* Desktop support */
+.support { display: grid; gap: 14px; }
+.support .card { display: grid; gap: 6px 18px; grid-template-columns: auto 1fr; align-items: start; }
+.badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; margin-top: 2px;
+  min-width: 92px; text-align: center; justify-self: start; }
+.badge.full { background: #dcf3e2; color: #1d6b35; }
+.badge.part { background: #fbeed8; color: #8a5a12; }
+:root[data-theme="dark"] .badge.full { background: #1c3a26; color: #8ad9a2; }
+:root[data-theme="dark"] .badge.part { background: #3d2f17; color: #f0c27a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .badge.full { background: #1c3a26; color: #8ad9a2; }
+  :root:not([data-theme="light"]) .badge.part { background: #3d2f17; color: #f0c27a; }
+}
+.support h3 { margin: 0; font-size: 16px; }
+.support p { grid-column: 2; margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 560px) { .support .card { grid-template-columns: 1fr; } .support p { grid-column: 1; } }
+
+/* Shortcuts */
+.keys { display: grid; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.keys div { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; padding: 14px 20px; border-top: 1px solid var(--line); }
+.keys div:first-child { border-top: 0; }
+.keys span { color: var(--muted); font-size: 15px; }
+kbd { font: 600 13px var(--font); padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line);
+  border-bottom-width: 2px; background: var(--bg); color: var(--text); white-space: nowrap; }
+
+/* Install */
+.steps { display: grid; gap: 18px; }
+@media (min-width: 900px) { .steps { grid-template-columns: 1.4fr 1fr; } }
+.code { position: relative; margin: 14px 0 0; background: var(--code-bg); color: var(--code-text); border-radius: 10px;
+  padding: 16px 16px 16px 16px; font: 13.5px/1.7 var(--mono); overflow-x: auto; white-space: pre; }
+.code .p { color: #7fb4ea; user-select: none; }
+.code .c { color: #8b9098; }
+.copy { position: absolute; top: 8px; right: 8px; font: 600 12px var(--font); color: var(--code-text); background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.16); border-radius: 7px; padding: 4px 10px; cursor: pointer; }
+.copy:hover { background: rgba(255,255,255,.18); }
+.pill { display: inline-block; font-size: 12px; font-weight: 700; color: var(--accent-strong); background: var(--accent-soft); padding: 2px 10px; border-radius: 999px; margin-left: 8px; vertical-align: 2px; }
+.card .note { margin-top: 12px; font-size: 14px; }
+.card code { font: 0.88em var(--mono); background: var(--bg-alt); border: 1px solid var(--line); padding: 1px 6px; border-radius: 5px; overflow-wrap: anywhere; }
+.more { display: grid; gap: 18px; }
+
+footer { padding: 40px 0 56px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; }
+footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="icon.png" alt="" width="30" height="30">Clipy for Linux</a>
+    <nav class="nav-links">
+      <a class="hide-sm" href="#features">Features</a>
+      <a class="hide-sm" href="#desktops">Desktops</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/oson-code/clipy">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <span class="eyebrow">Free and open source · MIT</span>
+        <h1>Everything you copied, one shortcut away.</h1>
+        <p class="lede">Clipy keeps your clipboard history and snippets in a menu that opens right at the mouse pointer.
+          Pick an item and it is pasted into the app you were using. A Linux port of Clipy for macOS.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#install">Install on Ubuntu or Mint</a>
+          <a class="btn btn-ghost" href="https://github.com/oson-code/clipy">View source</a>
+        </div>
+        <p class="fine">Ubuntu 22.04+, Linux Mint 21+, Debian, Pop!_OS · X11 and GNOME on Wayland</p>
+      </div>
+
+      <div class="stage" aria-label="The Clipy menu open at the mouse pointer over a text editor" role="img">
+        <div class="window">
+          <div class="titlebar">notes.txt — Text Editor</div>
+          <div class="doc">
+            Meeting with the design team<br>
+            Order number: <span class="caret"></span><br>
+            <br>
+            Colours for the banner:<br>
+            &nbsp;&nbsp;primary&nbsp;&nbsp;#FF8800<br>
+            &nbsp;&nbsp;text&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#1F1D1A
+          </div>
+        </div>
+        <div class="menu" aria-hidden="true">
+          <div class="head">History</div>
+          <div class="row on">1. ORD-2026-11-4471<span class="key">1</span></div>
+          <div class="row">2. https://example.com/brief<span class="key">2</span></div>
+          <div class="row"><span class="swatch"></span>3. #FF8800<span class="key">3</span></div>
+          <div class="row"><span class="folder"></span>4 - 13<span class="arrow"></span></div>
+          <div class="row"><span class="folder"></span>14 - 23<span class="arrow"></span></div>
+          <div class="sep"></div>
+          <div class="head">Snippet</div>
+          <div class="row"><span class="folder"></span>Email replies<span class="arrow"></span></div>
+          <div class="sep"></div>
+          <div class="row">Clear History</div>
+          <div class="row">Edit Snippets…</div>
+          <div class="row">Preferences…</div>
+        </div>
+        <svg class="pointer" viewBox="0 0 20 26" aria-hidden="true">
+          <path d="M1.5 1.5v19.2l5-4.7 3.2 7.6 3.5-1.5-3.2-7.4h6.9z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="alt">
+    <div class="wrap">
+      <h2>Built for the way you already work</h2>
+      <p class="section-lede">The menus, settings and snippet editor match Clipy for macOS, adapted to Linux shortcuts and desktops.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l6 16 2.5-6.5L19 11z"/></svg></div>
+          <h3>Menu at the pointer</h3>
+          <p>Press <kbd>Super</kbd> <kbd>Shift</kbd> <kbd>V</kbd> and the history opens where you are looking, not in a corner of the screen.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></div>
+          <h3>Pastes for you</h3>
+          <p>Choose an item and Clipy types the paste key in the app you were using. Terminals get <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>V</kbd>.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8 13h8"/></svg></div>
+          <h3>Snippets in folders</h3>
+          <p>Keep replies, addresses and code in folders, each with its own shortcut. Imports and exports Clipy's XML.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-5-8 8"/></svg></div>
+          <h3>Images and colours</h3>
+          <p>Copied images show as thumbnails and colour codes as swatches. Optionally saves new screenshots to the history.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+          <h3>Private by default</h3>
+          <p>History stays on your computer in a database only you can read. Passwords copied from KeePassXC can be skipped.</p>
+        </div>
+        <div class="card">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></svg></div>
+          <h3>Keyboard friendly</h3>
+          <p>Number keys pick the first ten items. Hold <kbd>Ctrl</kbd> while choosing to paste plain text or remove an item.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="desktops">
+    <div class="wrap">
+      <h2>Works on your desktop</h2>
+      <p class="section-lede">Clipy captures every copy on any desktop. How much else works depends on the session.</p>
+      <div class="support">
+        <div class="card">
+          <span class="badge full">Everything</span>
+          <h3>X11: Linux Mint Cinnamon, Ubuntu on Xorg, XFCE, MATE, KDE X11</h3>
+          <p>Global shortcuts, the menu at the pointer, automatic paste and clipboard capture.</p>
+        </div>
+        <div class="card">
+          <span class="badge full">Everything</span>
+          <h3>GNOME on Wayland 45–50: Ubuntu 24.04, 25.x, 26.04</h3>
+          <p>With the Clipy GNOME Shell extension, which the package installs. Log out and back in once after installing.</p>
+        </div>
+        <div class="card">
+          <span class="badge part">Partial</span>
+          <h3>KDE Plasma and wlroots on Wayland</h3>
+          <p>History and the panel menu work. Global shortcuts wait for the GlobalShortcuts portal; paste needs ydotool or wtype.</p>
+        </div>
+      </div>
+      <p class="fine">Ubuntu 22.04 runs GNOME 42, which the extension does not support: choose “Ubuntu on Xorg” at the login screen there.</p>
+    </div>
+  </section>
+
+  <section id="shortcuts" class="alt">
+    <div class="wrap">
+      <h2>Shortcuts</h2>
+      <p class="section-lede">All of them can be changed in Preferences → Shortcuts.</p>
+      <div class="keys">
+        <div><span>Main menu: history and snippets</span><span><kbd>Super</kbd> <kbd>Shift</kbd> <kbd>V</kbd></span></div>
+        <div><span>History menu</span><span><kbd>Super</kbd> <kbd>Ctrl</kbd> <kbd>V</kbd></span></div>
+        <div><span>Snippet menu</span><span><kbd>Super</kbd> <kbd>Shift</kbd> <kbd>B</kbd></span></div>
+        <div><span>Preferences, even with the panel icon hidden</span><span><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>Super</kbd> <kbd>V</kbd></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p class="section-lede">Add the Clipy repository once, and new versions arrive with your regular system updates.</p>
+      <div class="steps">
+        <div class="card">
+          <h3>From the APT repository <span class="pill">Recommended</span></h3>
+          <p>Ubuntu, Linux Mint, Debian and Pop!_OS.</p>
+<pre class="code"><button class="copy" type="button">Copy</button><span class="p">$ </span>sudo wget -qO /etc/apt/sources.list.d/clipy.sources \
+    https://oson-code.github.io/clipy/clipy.sources
+<span class="p">$ </span>sudo apt update
+<span class="p">$ </span>sudo apt install clipy
+<span class="p">$ </span>clipy &amp;   <span class="c"># first start asks whether to launch on login</span></pre>
+          <p class="note">On GNOME Wayland, log out and back in once so GNOME loads the Clipy extension, then run
+            <code>gnome-extensions enable clipy@osoncode.uz</code> if it is not on yet.</p>
+        </div>
+        <div class="more">
+          <div class="card">
+            <h3>Download a package</h3>
+            <p>A <code>.deb</code>, or a <code>.tar.gz</code> that installs for your user without sudo.</p>
+            <p class="note"><a href="https://github.com/oson-code/clipy/releases/latest">Latest release on GitHub →</a></p>
+          </div>
+          <div class="card">
+            <h3>Build from source</h3>
+            <p>Rust 1.90 or newer, GTK 3 and AppIndicator development files.</p>
+            <p class="note"><a href="https://github.com/oson-code/clipy#install">Build instructions →</a></p>
+          </div>
+          <div class="card">
+            <h3>Update or remove</h3>
+            <p><code>sudo apt upgrade</code> updates it with the rest of the system. <code>sudo apt remove clipy</code> removes it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Clipy for Linux · MIT license · <a href="https://github.com/oson-code/clipy">Source on GitHub</a></span>
+    <span>Port of <a href="https://github.com/Clipy/Clipy">Clipy for macOS</a> by the Clipy Project, whose icons and translations it uses.</span>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.copy').forEach(function (button) {
+  button.addEventListener('click', function () {
+    var pre = button.parentElement.cloneNode(true);
+    pre.querySelectorAll('.copy, .p, .c').forEach(function (el) { el.remove(); });
+    var text = pre.textContent.replace(/[ \t]+$/gm, '').trim();
+    var done = function (label) {
+      button.textContent = label;
+      setTimeout(function () { button.textContent = 'Copy'; }, 1600);
+    };
+    try {
+      navigator.clipboard.writeText(text).then(function () { done('Copied'); }, function () { done('Select to copy'); });
+    } catch (e) {
+      done('Select to copy');
+    }
+  });
+});
+</script>
+</body>
+</html>
